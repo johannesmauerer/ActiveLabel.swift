@@ -443,7 +443,7 @@ typealias ElementTuple = (range: NSRange, element: ActiveElement, type: ActiveTy
         setNeedsDisplay()
     }
     
-    fileprivate func element(at location: CGPoint) -> ElementTuple? {
+    public func element(at location: CGPoint) -> ElementTuple? {
         guard textStorage.length > 0 else {
             return nil
         }
