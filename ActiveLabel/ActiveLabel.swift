@@ -202,20 +202,21 @@ typealias ElementTuple = (range: NSRange, element: ActiveElement, type: ActiveTy
     // MARK: - touch events
     fileprivate func onTouch(_ touch: UITouch) -> Bool {
         let location = touch.location(in: self)
-        let element = element(at: location)
+        let elementTuple = element(at: location)
 
-        if let element = element {
-            switch element.type {
-            case .mention: didTapMention(element.element)
-            case .hashtag: didTapHashtag(element.element)
-            case .url: didTapStringURL(element.element)
-            case .email: didTapStringEmail(element.element)
-            case .custom: didTap(element.element, for: element.type)
+        if let elementTuple = elementTuple {
+            let element = elementTuple.element
+            switch elementTuple.type {
+            case .mention: didTapMention(element)
+            case .hashtag: didTapHashtag(element)
+            case .url: didTapStringURL(element)
+            case .email: didTapStringEmail(element)
+            case .custom: didTap(element, for: elementTuple.type)
             }
 
-            if selectedElement == nil || selectedElement?.type != element.type || selectedElement?.range.location != element.range.location {
+            if selectedElement == nil || selectedElement?.type != elementTuple.type || selectedElement?.range.location != elementTuple.range.location {
                 updateAttributesWhenSelected(false)
-                selectedElement = element
+                selectedElement = elementTuple
                 updateAttributesWhenSelected(true)
             }
             return true
