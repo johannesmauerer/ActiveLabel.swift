@@ -63,6 +63,9 @@ typealias ElementTuple = (range: NSRange, element: ActiveElement, type: ActiveTy
     public var highlightFontSize: CGFloat? = nil {
         didSet { updateTextStorage(parseText: false) }
     }
+
+    public var unidentifiedTapHandler: ((CGPoint) -> Void)?
+
     
     // MARK: - Computed Properties
     private var hightlightFont: UIFont? {
@@ -197,50 +200,36 @@ typealias ElementTuple = (range: NSRange, element: ActiveElement, type: ActiveTy
     }
     
     // MARK: - touch events
-    func onTouch(_ touch: UITouch) -> Bool {
+    fileprivate func onTouch(_ touch: UITouch) -> Bool {
         let location = touch.location(in: self)
-        var avoidSuperCall = false
-        
-        switch touch.phase {
-        case .began, .moved, .regionEntered, .regionMoved:
-            if let element = element(at: location) {
-                if element.range.location != selectedElement?.range.location || element.range.length != selectedElement?.range.length {
-                    updateAttributesWhenSelected(false)
-                    selectedElement = element
-                    updateAttributesWhenSelected(true)
-                }
-                avoidSuperCall = true
-            } else {
+        let element = element(at: location)
+
+        if let element = element {
+            switch element.type {
+            case .mention: didTapMention(element.element)
+            case .hashtag: didTapHashtag(element.element)
+            case .url: didTapStringURL(element.element)
+            case .email: didTapStringEmail(element.element)
+            case .custom: didTap(element.element, for: element.type)
+            }
+
+            if selectedElement == nil || selectedElement?.type != element.type || selectedElement?.range.location != element.range.location {
                 updateAttributesWhenSelected(false)
-                selectedElement = nil
+                selectedElement = element
+                updateAttributesWhenSelected(true)
             }
-        case .ended, .regionExited:
-            guard let selectedElement = selectedElement else { return avoidSuperCall }
-            
-            switch selectedElement.element {
-            case .mention(let userHandle): didTapMention(userHandle)
-            case .hashtag(let hashtag): didTapHashtag(hashtag)
-            case .url(let originalURL, _): didTapStringURL(originalURL)
-            case .custom(let element): didTap(element, for: selectedElement.type)
-            case .email(let element): didTapStringEmail(element)
-            }
-            
-            let when = DispatchTime.now() + Double(Int64(0.25 * Double(NSEC_PER_SEC))) / Double(NSEC_PER_SEC)
-            DispatchQueue.main.asyncAfter(deadline: when) {
-                self.updateAttributesWhenSelected(false)
-                self.selectedElement = nil
-            }
-            avoidSuperCall = true
-        case .cancelled:
+            return true
+        } else {
+            // Call the unidentifiedTapHandler with the tapped location
+            unidentifiedTapHandler?(location)
+        }
+
+        if selectedElement != nil {
             updateAttributesWhenSelected(false)
             selectedElement = nil
-        case .stationary:
-            break
-        @unknown default:
-            break
         }
-        
-        return avoidSuperCall
+
+        return false
     }
     
     // MARK: - private properties
